@@ -52,6 +52,24 @@ app.post("/api/create-run", async (req: Request, res: Response) => {
   }
 });
 
+app.get("/api/stats", async (req: Request, res: Response) => {
+  try {
+    const { stdout } = await execPromise(`python3 -m provenance_tool.cli get-stats-cmd --db ${DB_PATH}`);
+    res.json(JSON.parse(stdout));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/runs", async (req: Request, res: Response) => {
+  try {
+    const { stdout } = await execPromise(`python3 -m provenance_tool.cli list-runs-cmd --db ${DB_PATH}`);
+    res.json(JSON.parse(stdout));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get("/api/report/:artifactId", async (req: Request, res: Response) => {
   const { artifactId } = req.params;
   const reportPath = `report_${Date.now()}.json`;
