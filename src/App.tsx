@@ -82,7 +82,7 @@ const DEMO_REPORT: Report = {
 
 export default function App() {
   const [view, setView] = useState<'landing' | 'app'>('landing');
-  const [activeTab, setActiveTab] = useState<'report' | 'docs' | 'snapshot' | 'run'>('report');
+  const [activeTab, setActiveTab] = useState<'report' | 'docs' | 'snapshot' | 'run' | 'example'>('report');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
@@ -98,6 +98,35 @@ export default function App() {
   });
   const [reportId, setReportId] = useState('');
   const [report, setReport] = useState<Report | null>(null);
+  const [stats, setStats] = useState({ total_runs: 0, total_snapshots: 0, total_domains: 0, compliance_score: 0 });
+  const [runs, setRuns] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (view === 'app') {
+      fetchStats();
+      fetchRuns();
+    }
+  }, [view, activeTab]);
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('/api/stats');
+      const data = await res.json();
+      if (res.ok) setStats(data);
+    } catch (e) {
+      console.error("Failed to fetch stats", e);
+    }
+  };
+
+  const fetchRuns = async () => {
+    try {
+      const res = await fetch('/api/runs');
+      const data = await res.json();
+      if (res.ok) setRuns(data);
+    } catch (e) {
+      console.error("Failed to fetch runs", e);
+    }
+  };
 
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
@@ -368,7 +397,7 @@ export default function App() {
             </button>
             <div className="w-px h-6 bg-zinc-100" />
             <nav className="flex bg-zinc-100 p-1 rounded-xl">
-              {(['report', 'docs', 'snapshot', 'run'] as const).map((tab) => (
+              {(['report', 'example', 'docs', 'snapshot', 'run'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -378,7 +407,7 @@ export default function App() {
                       : 'text-zinc-400 hover:text-zinc-600'
                   }`}
                 >
-                  {tab === 'report' ? 'Explorer' : tab === 'docs' ? 'SDK' : tab}
+                  {tab === 'report' ? 'Explorer' : tab === 'docs' ? 'SDK' : tab === 'example' ? 'Case Study' : tab}
                 </button>
               ))}
             </nav>
@@ -405,34 +434,55 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+ 
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+          {[
+            { label: 'Total Runs', value: stats.total_runs, icon: <GitBranch size={16} />, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Snapshots', value: stats.total_snapshots, icon: <Globe size={16} />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Domains', value: stats.total_domains, icon: <Database size={16} />, color: 'text-violet-600', bg: 'bg-violet-50' },
+            { label: 'Compliance', value: `${stats.compliance_score}%`, icon: <ShieldCheck size={16} />, color: 'text-zinc-900', bg: 'bg-zinc-100' },
+          ].map((stat, i) => (
+            <div key={i} className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-8 h-8 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
+                  {stat.icon}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{stat.label}</span>
+              </div>
+              <p className="text-2xl font-display font-bold">{stat.value}</p>
+            </div>
+          ))}
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Sidebar / Steps */}
           <div className="lg:col-span-4 space-y-8">
-            <div className="space-y-4">
-              <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">Navigation</h2>
-              <div className="space-y-2">
-                {[
-                  { id: 'report', label: 'Audit Explorer', desc: 'Trace automated lineage' },
-                  { id: 'docs', label: 'SDK Integration', desc: 'Install background tracker' },
-                  { id: 'snapshot', label: 'Manual Signal', desc: 'Test signal capture' },
-                  { id: 'run', label: 'Manual Run', desc: 'Test transformation log' }
-                ].map((step) => (
-                  <button
-                    key={step.id}
-                    onClick={() => setActiveTab(step.id as any)}
-                    className={`w-full text-left p-4 rounded-2xl border transition-all ${
-                      activeTab === step.id 
-                        ? 'bg-white border-zinc-900 shadow-xl shadow-zinc-100' 
-                        : 'bg-transparent border-transparent text-zinc-400 hover:bg-zinc-50'
-                    }`}
-                  >
-                    <p className={`text-sm font-bold mb-1 ${activeTab === step.id ? 'text-zinc-900' : ''}`}>{step.label}</p>
-                    <p className="text-xs font-medium opacity-60">{step.desc}</p>
-                  </button>
-                ))}
+              <div className="space-y-4">
+                <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">Navigation</h2>
+                <div className="space-y-2">
+                  {[
+                    { id: 'report', label: 'Audit Explorer', desc: 'Trace automated lineage' },
+                    { id: 'example', label: 'Product Example', desc: 'See a real audit trail' },
+                    { id: 'docs', label: 'SDK Integration', desc: 'Install background tracker' },
+                    { id: 'snapshot', label: 'Manual Signal', desc: 'Test signal capture' },
+                    { id: 'run', label: 'Manual Run', desc: 'Test transformation log' }
+                  ].map((step) => (
+                    <button
+                      key={step.id}
+                      onClick={() => setActiveTab(step.id as any)}
+                      className={`w-full text-left p-4 rounded-2xl border transition-all ${
+                        activeTab === step.id 
+                          ? 'bg-white border-zinc-900 shadow-xl shadow-zinc-100' 
+                          : 'bg-transparent border-transparent text-zinc-400 hover:bg-zinc-50'
+                      }`}
+                    >
+                      <p className={`text-sm font-bold mb-1 ${activeTab === step.id ? 'text-zinc-900' : ''}`}>{step.label}</p>
+                      <p className="text-xs font-medium opacity-60">{step.desc}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
             <div className="p-6 bg-zinc-900 rounded-3xl text-white">
               <h3 className="font-bold mb-2 flex items-center gap-2 text-sm">
@@ -448,6 +498,195 @@ export default function App() {
           {/* Main Content Area */}
           <div className="lg:col-span-8">
             <AnimatePresence mode="wait">
+              {activeTab === 'example' && (
+                <motion.div
+                  key="example"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-8"
+                >
+                  <div className="bg-white rounded-[32px] border border-zinc-200 shadow-sm p-10">
+                    <div className="mb-10">
+                      <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center text-zinc-900 mb-6 border border-zinc-100">
+                        <FileText size={24} />
+                      </div>
+                      <h2 className="text-3xl font-display font-bold mb-3">Product Example: WebText-v2</h2>
+                      <p className="text-zinc-500">A concrete look at how Provenance solves real-world AI data challenges.</p>
+                    </div>
+
+                    <div className="space-y-12">
+                      <section className="space-y-8">
+                        <div className="text-center max-w-2xl mx-auto mb-12">
+                          <h3 className="text-2xl font-display font-bold mb-4">The Transformation: From Data Fog to Audit Clarity</h3>
+                          <p className="text-zinc-500 text-sm">How Provenance turns a liability into a strategic asset.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                          {/* Before Column */}
+                          <div className="space-y-6">
+                            <div className="flex items-center gap-3 text-red-500 font-bold uppercase tracking-widest text-xs">
+                              <AlertCircle size={16} />
+                              Before: The Data Fog
+                            </div>
+                            <div className="space-y-4">
+                              <div className="p-6 bg-red-50/30 border border-red-100 rounded-2xl space-y-3">
+                                <h4 className="font-bold text-zinc-900">Forensic Debt</h4>
+                                <p className="text-sm text-zinc-600 leading-relaxed">
+                                  When a model exhibits bias or a copyright claim arrives, engineers spend weeks manually reconstructing data history from fragmented logs and old git commits.
+                                </p>
+                              </div>
+                              <div className="p-6 bg-red-50/30 border border-red-100 rounded-2xl space-y-3">
+                                <h4 className="font-bold text-zinc-900">Compliance Hallucinations</h4>
+                                <p className="text-sm text-zinc-600 leading-relaxed">
+                                  Teams "assume" they followed <code className="bg-red-100/50 px-1 rounded text-red-700">robots.txt</code>, but have no timestamped proof of what the permissions were at the exact millisecond of the scrape.
+                                </p>
+                              </div>
+                              <div className="p-6 bg-red-50/30 border border-red-100 rounded-2xl space-y-3">
+                                <h4 className="font-bold text-zinc-900">The Lineage Gap</h4>
+                                <p className="text-sm text-zinc-600 leading-relaxed">
+                                  There is no verifiable link between the raw data on a server and the final weights in a model. The "Chain of Custody" is broken, making audits impossible.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* After Column */}
+                          <div className="space-y-6">
+                            <div className="flex items-center gap-3 text-emerald-500 font-bold uppercase tracking-widest text-xs">
+                              <CheckCircle2 size={16} />
+                              After: The Automated Auditor
+                            </div>
+                            <div className="space-y-4">
+                              <div className="p-6 bg-emerald-50/30 border border-emerald-100 rounded-2xl space-y-3">
+                                <h4 className="font-bold text-zinc-900">Instant Traceability</h4>
+                                <p className="text-sm text-zinc-600 leading-relaxed">
+                                  Every data point is automatically tagged with its origin, scraper version, and code commit. Forensic reconstruction takes seconds, not weeks.
+                                </p>
+                              </div>
+                              <div className="p-6 bg-emerald-50/30 border border-emerald-100 rounded-2xl space-y-3">
+                                <h4 className="font-bold text-zinc-900">Immutable Evidence</h4>
+                                <p className="text-sm text-zinc-600 leading-relaxed">
+                                  Every scrape captures a cryptographic snapshot of <code className="bg-emerald-100/50 px-1 rounded text-emerald-700">llms.txt</code> and <code className="bg-emerald-100/50 px-1 rounded text-emerald-700">robots.txt</code>, creating a permanent legal record of compliance.
+                                </p>
+                              </div>
+                              <div className="p-6 bg-emerald-50/30 border border-emerald-100 rounded-2xl space-y-3">
+                                <h4 className="font-bold text-zinc-900">End-to-End Lineage</h4>
+                                <p className="text-sm text-zinc-600 leading-relaxed">
+                                  A complete, searchable "Chain of Custody" from raw scrape to model deployment. Every transformation is recorded, verified, and ready for any auditor.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section className="space-y-8">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xl font-bold flex items-center gap-2">
+                            <CheckCircle2 size={20} className="text-emerald-500" />
+                            Audit Report: WebText-v2
+                          </h3>
+                          <div className="flex gap-2">
+                            <span className="px-3 py-1 bg-zinc-100 text-zinc-500 text-[10px] font-bold uppercase tracking-widest rounded-full">Internal Document</span>
+                            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-widest rounded-full">Verified</span>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-zinc-50 border border-zinc-200 rounded-3xl overflow-hidden">
+                          <div className="p-8 border-b border-zinc-200 bg-white">
+                            <div className="grid grid-cols-2 gap-8">
+                              <div>
+                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Artifact Name</p>
+                                <p className="font-display font-bold text-lg">WebText-v2-Final</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1">Verification Hash</p>
+                                <p className="font-mono text-xs text-zinc-500">sha256:8f2d1a...3e9b2c</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-8 space-y-8">
+                            {/* Signals Section */}
+                            <div className="space-y-4">
+                              <h4 className="text-sm font-bold text-zinc-900 border-l-2 border-zinc-900 pl-3">1. Scraping Signals (4 Domains)</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {[
+                                  { domain: 'tech-journal.com', status: 'Allowed', signal: 'robots.txt' },
+                                  { domain: 'science-daily.org', status: 'Allowed', signal: 'llms.txt' },
+                                  { domain: 'open-archive.io', status: 'Restricted', signal: 'robots.txt' },
+                                  { domain: 'global-news-wire.net', status: 'Allowed', signal: 'robots.txt' }
+                                ].map((d, i) => (
+                                  <div key={i} className="p-4 bg-white border border-zinc-100 rounded-2xl flex items-center justify-between">
+                                    <div>
+                                      <p className="font-bold text-sm">{d.domain}</p>
+                                      <p className="text-[10px] text-zinc-400">Captured via {d.signal}</p>
+                                    </div>
+                                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${d.status === 'Allowed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                      {d.status}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                              
+                              <div className="mt-4">
+                                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Raw Signal Snapshot (tech-journal.com)</p>
+                                <div className="bg-zinc-900 rounded-2xl p-6 font-mono text-[11px] text-zinc-300">
+                                  <p className="text-zinc-500 mb-2"># Captured at 2024-03-05 10:00:00Z</p>
+                                  <p className="text-emerald-400">User-agent: *</p>
+                                  <p className="text-red-400">Disallow: /admin/</p>
+                                  <p className="text-emerald-400">Allow: /</p>
+                                  <p className="mt-4 text-emerald-400">User-agent: GPTBot</p>
+                                  <p className="text-emerald-400">Allow: /public/articles/</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Lineage Section */}
+                            <div className="space-y-4">
+                              <h4 className="text-sm font-bold text-zinc-900 border-l-2 border-zinc-900 pl-3">2. Lineage Audit Log</h4>
+                              <div className="bg-white border border-zinc-100 rounded-2xl overflow-hidden">
+                                <table className="w-full text-left text-xs">
+                                  <thead className="bg-zinc-50 border-b border-zinc-100">
+                                    <tr>
+                                      <th className="p-4 font-bold text-zinc-400 uppercase tracking-widest">Step</th>
+                                      <th className="p-4 font-bold text-zinc-400 uppercase tracking-widest">Action</th>
+                                      <th className="p-4 font-bold text-zinc-400 uppercase tracking-widest">Code Version</th>
+                                      <th className="p-4 font-bold text-zinc-400 uppercase tracking-widest">Output</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-zinc-50">
+                                    <tr>
+                                      <td className="p-4 font-bold">01</td>
+                                      <td className="p-4 text-zinc-600">Raw Scrape (4 domains)</td>
+                                      <td className="p-4 font-mono text-zinc-400">scraper-v2.4</td>
+                                      <td className="p-4"><span className="px-2 py-0.5 bg-zinc-100 rounded">webtext_raw</span></td>
+                                    </tr>
+                                    <tr>
+                                      <td className="p-4 font-bold">02</td>
+                                      <td className="p-4 text-zinc-600">PII & Robots Filtering</td>
+                                      <td className="p-4 font-mono text-zinc-400">cleaner-v1.9</td>
+                                      <td className="p-4"><span className="px-2 py-0.5 bg-zinc-100 rounded">webtext_clean</span></td>
+                                    </tr>
+                                    <tr>
+                                      <td className="p-4 font-bold">03</td>
+                                      <td className="p-4 text-zinc-600">Model Fine-tuning</td>
+                                      <td className="p-4 font-mono text-zinc-400">trainer-v3.0</td>
+                                      <td className="p-4"><span className="px-2 py-0.5 bg-zinc-900 text-white rounded">webtext_v2_final</span></td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {activeTab === 'docs' && (
                 <motion.div
                   key="docs"
@@ -684,6 +923,32 @@ export default function App() {
                       </button>
                     </form>
                   </div>
+
+                  {!report && runs.length > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="bg-white rounded-[32px] border border-zinc-200 shadow-sm overflow-hidden"
+                    >
+                      <div className="p-8 border-b border-zinc-100 bg-zinc-50/30 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <History size={20} className="text-zinc-900" />
+                          <h3 className="font-display font-bold text-xl">Recent Activity</h3>
+                        </div>
+                      </div>
+                      <div className="divide-y divide-zinc-100">
+                        {runs.map((run, i) => (
+                          <div key={i} className="p-6 hover:bg-zinc-50 transition-colors cursor-pointer" onClick={() => { setReportId(run.run_id); handleGetReport({ preventDefault: () => {} } as any); }}>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-bold text-lg">{run.run_id}</h4>
+                              <span className="text-[10px] font-mono bg-zinc-100 px-2 py-1 rounded text-zinc-500">{new Date(run.created_at).toLocaleString()}</span>
+                            </div>
+                            <p className="text-sm text-zinc-500">{run.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
 
                   {report && (
                     <motion.div 
