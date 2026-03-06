@@ -87,3 +87,12 @@ def get_lineage_for_artifact(db_path: str, artifact_id: str) -> Dict[str, Any]:
             })
             
         return lineage
+
+def list_runs(db_path: str) -> List[Dict[str, Any]]:
+    """
+    Lists all recorded runs.
+    """
+    with db_session(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM runs ORDER BY created_at DESC")
+        return [dict(row) for row in cursor.fetchall()]
