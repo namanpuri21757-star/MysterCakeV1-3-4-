@@ -46,6 +46,29 @@ def generate_artifact_report(db_path: str, artifact_id: str) -> Dict[str, Any]:
                 
     return report
 
+def get_stats(db_path: str) -> Dict[str, Any]:
+    """
+    Returns basic statistics from the database.
+    """
+    with db_session(db_path) as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(*) as count FROM runs")
+        total_runs = cursor.fetchone()["count"]
+        
+        cursor.execute("SELECT COUNT(*) as count FROM policy_snapshots")
+        total_snapshots = cursor.fetchone()["count"]
+        
+        cursor.execute("SELECT COUNT(*) as count FROM domains")
+        total_domains = cursor.fetchone()["count"]
+        
+        return {
+            "total_runs": total_runs,
+            "total_snapshots": total_snapshots,
+            "total_domains": total_domains,
+            "compliance_score": 100 if total_snapshots > 0 else 0
+        }
+
 def export_artifact_report_as_json(db_path: str, artifact_id: str, output_path: str) -> None:
     """
     Generates an artifact report and exports it to a JSON file.
