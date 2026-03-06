@@ -2,8 +2,9 @@ import click
 import sys
 from .storage import init_db
 from .scraping import record_policies_for_dataset
-from .lineage import create_run
-from .reporting import export_artifact_report_as_json
+from .lineage import create_run, list_runs
+from .reporting import export_artifact_report_as_json, get_stats
+import json
 
 @click.group()
 def cli():
@@ -56,6 +57,28 @@ def generate_report(db, artifact_id, out):
     try:
         export_artifact_report_as_json(db, artifact_id, out)
         click.echo(f"Generated report for {artifact_id} at {out}")
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+@cli.command()
+@click.option("--db", required=True, help="Path to the SQLite database.")
+def list_runs_cmd(db):
+    """List all recorded runs in JSON format."""
+    try:
+        runs = list_runs(db)
+        click.echo(json.dumps(runs))
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+@cli.command()
+@click.option("--db", required=True, help="Path to the SQLite database.")
+def get_stats_cmd(db):
+    """Get database statistics in JSON format."""
+    try:
+        stats = get_stats(db)
+        click.echo(json.dumps(stats))
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
